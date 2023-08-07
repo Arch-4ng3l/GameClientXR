@@ -7,6 +7,8 @@ using UnityEngine;
 using System.Net.Http;
 using System.IO;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using UnityEditor;
 
 public class Client
 {
@@ -58,9 +60,8 @@ public class Client
             }
 
         }
-        catch (Exception e)
+        catch (Exception)
         {
-
             return 1;
         }
         return 0;
@@ -101,25 +102,18 @@ public class Client
         
         try
         {
-            
-
             list = JsonConvert.DeserializeObject<T[]>(finalString);
-            
-            return list;
-            
         }
-        catch (Exception ex)
+        catch (Exception e)
         {
-            
-            return list;
+            Debug.Log($"{e}");
         }
 
-        
-        
+        return list;
     }
 
 
-    public async Task GetAssets(string path, string targetPath)
+    public async Task<List<GameObject>> GetAssets(string path, string targetPath)
     {
         try
         {
@@ -141,18 +135,41 @@ public class Client
         catch (Exception e)
         {
             Debug.Log($"{e}");
-            return;
+            return null;
         }
 
         ZipExtractor zipExtractor = new(path, targetPath);
         int err = zipExtractor.Extract();
         if (err != 0)
         {
-            return;
+            return null;
         }
-
+        return GetAssets(targetPath);
     }
 
- 
+    public List<GameObject> GetAssets(string path) 
+    {
+        string targetPath =   path + @"\assets";
+        string[] files = Directory.GetFiles(targetPath);
+        List<GameObject> objects = new();
+        foreach (string filePath in files) 
+        {
+            try 
+            {
+                AssetBundle assetBundle = AssetBundle.LoadFromFile(filePath);
+                string[] assetNames = assetBundle.GetAllAssetNames();
+                foreach (string assetName in assetNames) 
+                {
+                    objects.Add(assetBundle.LoadAsset<GameObject>(assetName));
+                }
+            }
+            catch (Exception) 
+            {
+            }
+        }
+        Debug.Log($"{objects.Count}");
+        return objects;
+    }
+
 }
 

@@ -6,32 +6,24 @@ using UnityEngine;
 
 public class ButtonTouch : MonoBehaviour
 {
-
+    public GameObject player;
+    uint count;
     GameObject obj = null;
-    List<GameObject> gameObjects = new List<GameObject>();
-    // Start is called before the first frame update
     void Start()
     {
     }
 
-    // Update is called once per frame
     void Update()
     {
-        //textLabel.text = count.ToString();
+    }
+
+    public void Done(uint nums) {
+        count = nums;
     }
 
         
-    void DeleteLastObject()
-    {
-        if (gameObjects.Count > 0)
-        {
-            Destroy(gameObjects.Last());
-            gameObjects.Remove(gameObjects.Last());
-        }
-    }
     void SpawnObject(string type)
     {
-
         switch (type) {
             case "Cube":
                 obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -41,7 +33,6 @@ public class ButtonTouch : MonoBehaviour
                 break;
             case "Capsula":
                 obj = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-                
                 break;
             case "Cylinder":
                 obj = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -50,36 +41,33 @@ public class ButtonTouch : MonoBehaviour
                 return;
         }
 
-
-        GameObject[] temp = GameObject.FindGameObjectsWithTag("MainCamera");
-
-        Vector3 position = temp[0].transform.position;
+        Vector3 position = player.transform.position;
 
         obj.transform.position = position;
 
         obj.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
 
         obj.AddComponent<Microsoft.MixedReality.Toolkit.UI.ObjectManipulator>();
+        obj.AddComponent<Microsoft.MixedReality.Toolkit.Input.NearInteractionGrabbable>();
         obj.AddComponent<SpawnedObject>();
-        name = obj.name + gameObjects.Count().ToString();
 
-        obj.name = name;
-        gameObjects.Add(obj);
+        obj.name = obj.name + count.ToString();
+        count++;
     }
-    void SpawnCube()
+    public void SpawnCube()
     {
         SpawnObject("Cube");
     }
-    void SpawnSphere()
+    public void SpawnSphere()
     {
         SpawnObject("Sphere");
     }
-    void SpawnCylinder()
+    public void SpawnCylinder()
     {
         SpawnObject("Cylinder");
     }
 
-    void SpawnCapsula()
+    public void SpawnCapsula()
     {
         SpawnObject("Capsula");
     }

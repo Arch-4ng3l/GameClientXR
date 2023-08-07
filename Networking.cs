@@ -2,19 +2,24 @@ using System;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UnityEngine;
+using System.Collections.Generic;
 
 public class Networking : MonoBehaviour
 {
     public float renderDistance;
-    public string url;
-    private JsonSettings settings;
+    public string ip;
+    public string port;
+    private JsonSettings settings = new();
     private Client client;
+    public GameObject button;
+    public List<GameObject> spawnableObjects;
     async void Start()
     {
-        Uri uri = new("ws://192.168.178.20:3000/api");
-        Uri uri2 = new("http://192.168.178.20:3000/api/assets");
+        string url1 = "ws://"+ ip + ":" + port + "/api";
+        string url2 = "http://"+ ip + ":" + port + "/api/assets";
+        Uri uri = new(url1);
+        Uri uri2 = new(url2);
         client = new Client(uri, uri2);
-        //settings.renderdistance = renderDistance;
         
         int err = await client.Connect();
         
@@ -23,23 +28,28 @@ public class Networking : MonoBehaviour
             return;
         }
 
-        await client.GetAssets("./Assets/assets.zip", "./Assets");
-        //Task task3 = client.SendJson<JsonSettings>(settings);
-        //task3.RunSynchronously();
-        
 
+        settings.nums = renderDistance;
+        await client.SendJson<JsonSettings>(settings);
+        var s = await client.ReceiveJson<JsonSettings>();   
+
+        if (s == null) {
+            return;;
+        }
+
+        uint  nums = (uint)s[0].nums;
+        spawnableObjects = await client.GetAssets("./Assets/assets.zip", "./Assets");
+        button.SendMessage("Done", nums);
     }
-
-    // Update is called once per frame
-    //void Update()
-    
 
     public async void SendObject(GameObject send)
     {
-
+        if (send == null || client == null) 
+        {
+            return;
+        }
         JsonObject json = new JsonObject();
         json.FromGameObject(send);
-
         await client.SendJson<JsonObject>(json);
        
         if (json.name != "Player")
@@ -53,13 +63,57 @@ public class Networking : MonoBehaviour
     async Task RecvObjects()
     {
         JsonObject[] objs = await client.ReceiveJson<JsonObject>();
-
+        if(objs == null) {
+            return;
+        }
         foreach (JsonObject json in objs)
         {
-            json.ToGameObject();
+            ToGameObject(json);
             await Task.Delay(50);
         }
         
+    }
+
+    private void LoadAssets() 
+    {
+
+    }
+
+    private void ToGameObject(JsonObject json)
+    {
+
+        GameObject obj = GameObject.Find(json.name);
+        Vector3 position = new Vector3(json.x, json.y, json.z);
+
+        if (obj == null)
+        {
+            string pattern = @"\d+$";
+            string objName = Regex.Replace(name, pattern, "");
+            foreach(GameObject gameObject in spawnableObjects) 
+            {
+                Debug.Log(gameObject.name);
+                if(gameObject.name == objName) 
+                {
+                    obj = gameObject;
+                    break;
+                }
+            }
+
+            obj = UnityEngine.Object.Instantiate(obj, position, Quaternion.identity);
+            obj.name = name;
+
+            obj.AddComponent<Microsoft.MixedReality.Toolkit.UI.ObjectManipulator>();
+            obj.AddComponent<SpawnedObject>();
+
+            return;
+        }
+
+        if (obj.transform.position != position)
+        {
+            obj.transform.position = position;
+        }
+
+        return;
     }
 }
 
@@ -85,38 +139,9 @@ public class JsonObject
         this.y = go.transform.position.y;
         this.z = go.transform.position.z;
     }
-    public void ToGameObject()
-    {
-
-        GameObject obj = GameObject.Find(name);
-        Vector3 position = new Vector3(x, y, z);
-
-        if (obj == null)
-        {
-            string pattern = @"\d+$";
-            string objName = Regex.Replace(name, pattern, "");
-            obj = GameObject.Find(objName);
-            obj = UnityEngine.Object.Instantiate(obj, position, Quaternion.identity);
-            obj.name = name;
-
-            obj.AddComponent<Microsoft.MixedReality.Toolkit.UI.ObjectManipulator>();
-
-            obj.AddComponent<SpawnedObject>();
-
-            return;
-        }
-
-        if (obj.transform.position != position)
-        {
-            obj.transform.position = position;
-        }
-
-        return;
-    }
 }
 
 class JsonSettings
 {
-    public float renderdistance;
-
+    public float nums;
 }
